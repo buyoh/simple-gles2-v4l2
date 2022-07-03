@@ -11,6 +11,7 @@ list(APPEND SOURCES
     src/bin/main.cpp
     src/app/app.cpp
     src/base/command_line.cpp
+    src/base/task_runner.cpp
     src/egl/aegl.cpp
     src/egl/utils.cpp
     src/gles2/egl/dma_buffer_texture.cpp
@@ -26,6 +27,7 @@ add_executable(app-main ${SOURCES})
 
 target_compile_options(app-main PUBLIC -O2 -Wall)
 target_compile_options(app-main PUBLIC -g)
+target_link_options(app-main PUBLIC -lpthread)
 
 # list(APPEND EXTRA_LIBS
 # "-lGLESv2 -lEGL -lX11"
