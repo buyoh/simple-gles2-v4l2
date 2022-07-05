@@ -33,3 +33,12 @@ target_link_options(app-main PUBLIC -lpthread)
 # "-lGLESv2 -lEGL -lX11"
 # )
 target_link_libraries(app-main Dependencies ${EXTRA_LIBS})
+
+# TODO: refactor
+list(APPEND TR_SOURCES
+    src/base/task_runner.cpp
+    src/bin/task_runner_test.cpp
+)
+
+add_executable(task-runner-test ${TR_SOURCES})
+target_link_options(task-runner-test PUBLIC -lpthread)
