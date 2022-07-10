@@ -1,7 +1,10 @@
+// TODO: cleanup header
 #include <math.h>
 #include <unistd.h>
 #include <algorithm>
 #include <iostream>
+#include <memory>
+#include <thread>
 #include <vector>
 #include "base/logging.h"
 
@@ -9,6 +12,7 @@
 #include <GLES2/gl2.h>
 #include <X11/Xlib.h>
 
+#include "base/task_runner.h"
 #include "egl/aegl.h"
 #include "gles2/egl/dma_buffer_texture.h"
 #include "gles2/shader.h"
@@ -21,6 +25,8 @@
 #include <GL/gl.h>
 
 #include "app/app.h"
+
+#define USE_V4L2 0  // pending..
 
 namespace {
 
@@ -72,6 +78,126 @@ const char* texture_fshader = R"(
 
 }  // namespace
 
+// class WorkerManager? and WorkerManager::Client?
+
+// class Worker;
+
+// class WorkerManager {
+//  public:
+//   class Callback {
+//    public:
+//     Callback();
+//     // should be run on main thread!
+//     void stopAllWorker();
+
+//    private:
+//     friend WorkerManager;
+//     Callback(std::weak_ptr<WorkerManager*> manager);
+
+//     std::weak_ptr<WorkerManager*> manager_;
+//   };
+//   WorkerManager();
+//   // TODO: bad impl? use builder?
+//   void addWorker(std::unique_ptr<Worker> worker);
+//   bool startAllWorker();
+
+//  private:
+//   void onStopAllworker();
+
+//   std::vector<std::unique_ptr<Worker>> workers_;
+//   std::shared_ptr<WorkerManager*> weak_ptr_factory_;
+// };
+
+// class Worker {
+//  public:
+//   virtual bool initialize(WorkerManager::Callback cb) = 0;
+//   virtual void start() = 0;
+//   virtual void stop() = 0;
+// };
+
+// class GlRenderer {
+//  public:
+//   virtual bool initialize() = 0;
+//   virtual bool render() = 0;
+//   virtual void stop() = 0;
+// };
+
+// class GlWorker : public Worker {
+//  public:
+//   GlWorker(TaskRunner& task_runner){};
+//   bool initialize(WorkerManager::Callback cb) final;
+//   void start() final;
+//   void stop() final;
+//   // TODO: bad impl? use builder?
+//   void addGlRenderer(GlRenderer&& renderer);
+
+//  protected:
+//   virtual bool glInitialize() = 0;
+//   virtual bool glWillRender() = 0;
+//   virtual bool glDoneRender() = 0;
+
+//  private:
+//   void startInternal();
+//   void mainloopTask();
+
+//   WorkerManager::Callback callback_;
+//   std::vector<GlRenderer> renderer_;
+// };
+
+// WorkerManager::Callback::Callback() : manager_() {}
+// WorkerManager::Callback::Callback(std::weak_ptr<WorkerManager*> manager)
+//     : manager_(manager) {}
+
+// void WorkerManager::Callback::stopAllWorker() {
+//   if (manager_.expired())
+//     return;
+//   // bad
+//   (*(manager_).lock().get())->onStopAllworker();
+//   //
+// }
+
+// WorkerManager::WorkerManager()
+//     : workers_(), weak_ptr_factory_(std::make_shared<WorkerManager*>(this))
+//     {}
+
+// void WorkerManager::addWorker(std::unique_ptr<Worker> worker) {
+//   workers_.push_back(std::move(worker));
+// }
+
+// bool WorkerManager::startAllWorker() {
+//   for (auto& worker : workers_) {
+//     worker->initialize(WorkerManager::Callback(
+//         std::weak_ptr<WorkerManager*>(weak_ptr_factory_)));
+//   }
+//   // TODO:when does worker start?
+//   for (auto& worker : workers_) {
+//     worker->start();
+//   }
+// }
+
+// bool GlWorker::initialize(WorkerManager::Callback callback) {
+//   callback_ = callback;
+//   return glInitialize();
+// }
+
+// void GlWorker::start() {
+//   startInternal();
+//   // post
+//   {
+//     // if finish then break loop
+//     // will render
+//     // done render
+//     // if err then callback stopAll
+//     // re_post
+//   }
+// }
+
+// void GlWorker::startInternal() {}
+
+// void GlWorker::mainloopTask() {}
+
+//
+
 // TODO: classize regarding dtor
 void AppMain::startMainLoop(EGLDisplay display, EGLSurface surface) {
   //
@@ -122,6 +248,7 @@ void AppMain::startMainLoop(EGLDisplay display, EGLSurface surface) {
   //   }
   // }
 
+#if USE_V4L2
   //
   V4L2Device v4l2;
   if (!v4l2.open("/dev/video0"))
@@ -134,7 +261,7 @@ void AppMain::startMainLoop(EGLDisplay display, EGLSurface surface) {
     return;
   }
   dma.queue(v4l2, 0);
-
+#endif
   //
   // GlES2Texture texture_holder = *GlES2Texture::create();  // unwrap
   // texture_holder.initialize();
@@ -145,7 +272,6 @@ void AppMain::startMainLoop(EGLDisplay display, EGLSurface surface) {
   // texture_holder.setBuffer(nullptr, 256, 256, GL_DEPTH_COMPONENT);
 
   glEnable(GL_DEPTH_TEST);
-  // glDepthFunc(GL_LESS);
 
   for (int counter = 0;; ++counter) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -165,6 +291,7 @@ void AppMain::startMainLoop(EGLDisplay display, EGLSurface surface) {
         1.0f, 1.0f,  //
     };
 
+#if USE_V4L2
     glUseProgram(texture_program);
     glUniform1i(u_texture_handle, 0 /* texture unit id */);
     glVertexAttribPointer(a_position_handle, 2, GL_FLOAT, GL_FALSE, 0,
@@ -179,6 +306,7 @@ void AppMain::startMainLoop(EGLDisplay display, EGLSurface surface) {
     dma.bindTexture(counter % 2);
     // glViewport();
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+#endif
 
     // render triangle
     double angle = M_PI * 2 * counter / 180;
@@ -222,7 +350,8 @@ void AppMain::startMainLoop(EGLDisplay display, EGLSurface surface) {
     usleep(16600);
   }
 
+#if USE_V4L2
   v4l2.stopV4L2stream();
-
+#endif
   VLOG(0) << "done";
 }
