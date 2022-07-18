@@ -82,68 +82,6 @@ const char* texture_fshader = R"(
 
 // class Worker;
 
-// class WorkerManager {
-//  public:
-//   class Callback {
-//    public:
-//     Callback();
-//     // should be run on main thread!
-//     void stopAllWorker();
-
-//    private:
-//     friend WorkerManager;
-//     Callback(std::weak_ptr<WorkerManager*> manager);
-
-//     std::weak_ptr<WorkerManager*> manager_;
-//   };
-//   WorkerManager();
-//   // TODO: bad impl? use builder?
-//   void addWorker(std::unique_ptr<Worker> worker);
-//   bool startAllWorker();
-
-//  private:
-//   void onStopAllworker();
-
-//   std::vector<std::unique_ptr<Worker>> workers_;
-//   std::shared_ptr<WorkerManager*> weak_ptr_factory_;
-// };
-
-// class Worker {
-//  public:
-//   virtual bool initialize(WorkerManager::Callback cb) = 0;
-//   virtual void start() = 0;
-//   virtual void stop() = 0;
-// };
-
-// class GlRenderer {
-//  public:
-//   virtual bool initialize() = 0;
-//   virtual bool render() = 0;
-//   virtual void stop() = 0;
-// };
-
-// class GlWorker : public Worker {
-//  public:
-//   GlWorker(TaskRunner& task_runner){};
-//   bool initialize(WorkerManager::Callback cb) final;
-//   void start() final;
-//   void stop() final;
-//   // TODO: bad impl? use builder?
-//   void addGlRenderer(GlRenderer&& renderer);
-
-//  protected:
-//   virtual bool glInitialize() = 0;
-//   virtual bool glWillRender() = 0;
-//   virtual bool glDoneRender() = 0;
-
-//  private:
-//   void startInternal();
-//   void mainloopTask();
-
-//   WorkerManager::Callback callback_;
-//   std::vector<GlRenderer> renderer_;
-// };
-
 // WorkerManager::Callback::Callback() : manager_() {}
 // WorkerManager::Callback::Callback(std::weak_ptr<WorkerManager*> manager)
 //     : manager_(manager) {}
